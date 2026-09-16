@@ -1,0 +1,4 @@
+open-spin-fv-1-compiler bootstrap
+Source repository: /home/adamjvr/GitHub/Spin-FV-1-Emulator
+Source commit: 7116ad3b0fc91f3099d546467d567e39c343252e
+Generated: 2026-09-16T07:11:03Z
