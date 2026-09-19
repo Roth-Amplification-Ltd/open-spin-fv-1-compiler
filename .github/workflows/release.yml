@@ -1,0 +1,128 @@
+name: Build and Publish Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag (for example v0.2.0)
+        required: true
+        default: v0.2.0
+        type: string
+      publish:
+        description: Publish/update GitHub Release
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+      sha: ${{ steps.meta.outputs.sha }}
+      publish: ${{ steps.meta.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - id: meta
+        shell: bash
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_PUBLISH: ${{ inputs.publish }}
+        run: |
+          set -Eeuo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then TAG="$INPUT_TAG"; PUBLISH="$INPUT_PUBLISH"; else TAG="$GITHUB_REF_NAME"; PUBLISH=true; fi
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || { echo "bad tag: $TAG"; exit 1; }
+          git fetch --force --tags origin
+          SHA="$(git rev-list -n1 "$TAG")"; VERSION="${TAG#v}"
+          CMAKE_VERSION="$(sed -nE 's/^project\(open_spin_fv1_compiler VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)"
+          [[ "$VERSION" == "$CMAKE_VERSION" ]] || { echo "tag $VERSION != CMake $CMAKE_VERSION"; exit 1; }
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"; echo "version=$VERSION" >> "$GITHUB_OUTPUT"; echo "sha=$SHA" >> "$GITHUB_OUTPUT"; echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
+
+  package:
+    needs: resolve
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-24.04, target: linux-x86_64 }
+          - { runner: ubuntu-24.04-arm, target: linux-arm64 }
+          - { runner: macos-15, target: macos-arm64 }
+          - { runner: macos-15-intel, target: macos-x86_64 }
+          - { runner: windows-2025, target: windows-x86_64 }
+          - { runner: windows-11-arm, target: windows-arm64 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+          fetch-depth: 0
+      - name: Verify tagged commit
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ needs.resolve.outputs.sha }}"
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: CTest
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Qualification
+        run: python tools/qualification.py --repo . --build build --expect-version ${{ needs.resolve.outputs.version }}
+      - name: Install staged SDK + CLI
+        run: cmake --install build --config Release --prefix stage
+      - name: Package + provenance
+        run: python tools/package_release.py --stage stage --out dist --version ${{ needs.resolve.outputs.version }} --target ${{ matrix.target }} --commit ${{ needs.resolve.outputs.sha }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    needs: [resolve, package]
+    if: needs.resolve.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+      - name: Verify assets and write aggregate checksum
+        shell: bash
+        env: { VERSION: "${{ needs.resolve.outputs.version }}" }
+        run: |
+          set -Eeuo pipefail
+          test "$(find release-assets -maxdepth 1 -type f \( -name '*.zip' -o -name '*.tar.gz' \) | wc -l)" -eq 6
+          cd release-assets
+          sha256sum open-spin-fv1-${VERSION}-*.tar.gz open-spin-fv1-${VERSION}-*.zip > SHA256SUMS.txt
+      - name: Publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          set -Eeuo pipefail
+          NOTES=/tmp/release-notes.md
+          cat > "$NOTES" <<'TXT'
+          Standalone native SpinASM compiler and embeddable C++ library for the Spin FV-1.
+
+          Every attached binary was built from the exact tagged commit and passed CTest plus the release qualification gate on its native runner. SHA-256 checksums and per-asset provenance manifests are attached.
+
+          Compatibility target: Spin Semiconductor SpinAsm 1.1.31. The preserved official oracle vectors protect the reverse-engineered syntax and fixed-point behaviors that previously exposed mismatches. Compatibility claims remain explicitly corpus-scoped.
+          TXT
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release-assets/* --clobber
+          else
+            gh release create "$TAG" release-assets/* --title "open-spin-fv1 ${TAG#v}" --notes-file "$NOTES"
+          fi

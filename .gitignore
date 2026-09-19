@@ -3,3 +3,6 @@
 /dist/
 *.user
 .DS_Store
+/install-*/
+**/__pycache__/
+*.pyc
