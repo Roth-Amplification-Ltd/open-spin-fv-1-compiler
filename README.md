@@ -1,25 +1,19 @@
 # open-spin-fv-1-compiler
 
-Open-source native SpinASM compiler for the Spin Semiconductor FV-1.
+Open-source native SpinASM compiler for the Spin Semiconductor FV-1. This repository is the **canonical compiler implementation**; FV-1 Lab consumes a synchronized/pinned snapshot but remains a separate emulator/testbench product.
 
-This project is the compiler-only extraction of the native compiler developed
-inside `Spin-FV-1-Emulator`. It has no emulator, audio, GUI, Qt, or realtime
-runtime dependency.
+The project ships two things:
 
-## Provenance
+- `open-spin-fv1` — standalone command-line compiler;
+- `OpenSpinFV1::compiler` — embeddable C++20 static library/CMake package.
 
-Imported from:
+## Compatibility status
 
-```
-Roth-Amplification-Ltd/Spin-FV-1-Emulator
-7116ad3b0fc91f3099d546467d567e39c343252e
-```
+Target: **Spin Semiconductor SpinAsm 1.1.31**.
 
-That upstream compiler reached **9/9 byte-identical output** against the real
-Spin Semiconductor SpinAsm 1.1.31 compiler for the current conformance corpus.
+Reverse-engineering and byte-level differential testing found and corrected real incompatibilities, including non-official `JMP` handling and fixed-point rounding behavior. The audited product corpus reached **9/9 byte-identical output** versus genuine SpinAsm 1.1.31.
 
-This is a corpus-scoped compatibility claim, not an assertion that every
-possible historical SpinASM input has already been exhaustively proven.
+That statement is deliberately corpus-scoped. See `docs/CONFORMANCE.md` and `docs/QUALIFICATION.md`.
 
 ## Build
 
@@ -44,7 +38,32 @@ open-spin-fv1 --check program.spn
 open-spin-fv1 --version
 ```
 
-The output is one raw 512-byte FV-1 program image.
+Output is one raw 512-byte FV-1 program image (128 big-endian 32-bit instruction words).
+
+## Embedding
+
+After installation:
+
+```cmake
+find_package(OpenSpinFV1 CONFIG REQUIRED)
+target_link_libraries(my_target PRIVATE OpenSpinFV1::compiler)
+```
+
+Include:
+
+```cpp
+#include <fv1/spinasm.hpp>
+```
+
+## Releases
+
+Version tags (`v0.2.0`, etc.) build and qualify native release assets for:
+
+- Linux x86_64 and ARM64;
+- macOS x86_64 and Apple Silicon ARM64;
+- Windows x86_64 and ARM64.
+
+Each release includes the CLI, static library, public header, CMake package metadata, documentation, SHA-256 checksums and provenance manifests.
 
 ## License
 
