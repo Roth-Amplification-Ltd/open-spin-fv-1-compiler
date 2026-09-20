@@ -19,3 +19,17 @@ The audited product corpus reached **9/9 byte-identical programs** against real 
 `tools/qualification.py` permanently guards the known official oracle behavior, deterministic compilation, shipped corpus, parser rejection, and size boundaries on every supported release architecture. `tools/compiler_conformance.py` remains the authoritative procedure for new differential work with the genuine official compiler.
 
 Official SpinAsm itself is not distributed by this repository.
+
+## Expanded 1.0 differential
+
+The next compatibility gate is the deterministic corpus under
+`conformance/corpus/`, not merely the nine shipped product examples. The
+conformance harness now discovers both sets, records source SHA-256 in every
+prepared official batch, and treats the historical Python assembler as
+diagnostic only.
+
+`conformance/adjudication/` contains isolated syntax questions that require the
+genuine SpinAsm application to classify before they are promoted to an official
+positive or negative contract.
+
+No 1.0 claim should be made until the expanded corpus is complete and sealed.

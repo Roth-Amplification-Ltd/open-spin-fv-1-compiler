@@ -30,3 +30,16 @@ The current audited product corpus reached **9/9 byte-identical** native output.
 - real-valued fixed-point operands truncate toward zero rather than round-to-nearest.
 
 Before a future `1.0.0` compiler release, expand and seal a syntax/opcode/boundary torture corpus against the genuine official compiler. The 0.x release line is intentionally the qualification series.
+
+## 1.0 expansion
+
+The historical 9/9 product corpus is not the final 1.0 proof. The repository now
+contains a deterministic instruction/parser/boundary census under
+`conformance/`, audited by `tools/corpus_audit.py`.
+
+Before 1.0, every case in `conformance/corpus/` must be byte-identical to
+genuine SpinAsm 1.1.31 output. Parser features whose official accept/reject
+behavior is not yet sealed live under `conformance/adjudication/` and must be
+tested individually rather than guessed.
+
+See [`QUALIFICATION-1.0.md`](QUALIFICATION-1.0.md).

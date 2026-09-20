@@ -1,0 +1,10 @@
+SKP 0,zero
+zero:
+SKP RUN,one
+NOP
+one:
+SKP ZRC|ZRO|GEZ|NEG,two
+NOP
+two:
+SKP NEG,0
+NOP

@@ -1,0 +1,6 @@
+begin:
+NOP
+Middle: nop
+SKP 0,EndLabel
+EndLabel:
+NOP

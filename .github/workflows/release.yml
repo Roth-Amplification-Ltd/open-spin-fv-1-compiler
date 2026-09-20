@@ -63,6 +63,10 @@ jobs:
         with:
           ref: ${{ needs.resolve.outputs.tag }}
           fetch-depth: 0
+      - name: Corpus integrity
+        run: |
+          python tools/generate_conformance_corpus.py --check
+          python tools/corpus_audit.py
       - name: Verify tagged commit
         shell: bash
         run: test "$(git rev-parse HEAD)" = "${{ needs.resolve.outputs.sha }}"

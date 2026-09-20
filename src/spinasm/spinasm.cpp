@@ -684,28 +684,76 @@ std::uint32_t encode_instruction(const ParsedInstruction& ins, const SymbolTable
         return ((static_cast<std::uint32_t>(lfo) | 0x2u) << 6) | 0x13u;
     }
     if (m == "CHO") {
-        if (a.size() != 2 && a.size() != 3 && a.size() != 4) {
+        if (a.size() < 2 || a.size() > 4) {
             throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": CHO expects 2-4 operands");
         }
         const std::string cho_type = upper(trim(a[0]));
-        const auto lfo = as_int(eval_expr(a[1], symbols, ins.line));
-        if (lfo < 0 || lfo > 3) throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": invalid CHO LFO");
         std::uint32_t flags = 0;
         std::uint32_t address = 0;
         std::uint32_t type_code = 0;
+
         if (cho_type == "RDAL") {
-            flags = a.size() >= 3 && !a[2].empty() ? static_cast<std::uint32_t>(as_int(eval_expr(a[2], symbols, ins.line))) : 2u;
+            if (a.size() != 2 && a.size() != 3) {
+                throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": CHO RDAL expects LFO[, flags]");
+            }
+
+            const std::string lfo_token = upper(trim(a[1]));
+            bool cosine_alias = false;
+            std::int64_t lfo = 0;
+            if (lfo_token == "COS0") {
+                lfo = 0;
+                cosine_alias = true;
+            } else if (lfo_token == "COS1") {
+                lfo = 1;
+                cosine_alias = true;
+            } else {
+                lfo = as_int(eval_expr(a[1], symbols, ins.line));
+            }
+            if (lfo < 0 || lfo > 3) {
+                throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": invalid CHO LFO");
+            }
+
+            flags = a.size() == 3 && !a[2].empty()
+                ? static_cast<std::uint32_t>(as_int(eval_expr(a[2], symbols, ins.line)))
+                : 2u; // official default is REG
+            if (cosine_alias) flags |= 1u; // COS0/COS1 select cosine output
             type_code = 3;
-        } else {
-            if (a.size() != 4) throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": CHO " + cho_type + " expects LFO, flags, value");
-            flags = a[2].empty() ? 0u : static_cast<std::uint32_t>(as_int(eval_expr(a[2], symbols, ins.line)));
-            const Value value = eval_expr(a[3], symbols, ins.line);
-            address = is_int(value) ? static_cast<std::uint32_t>(as_int(value)) & M16 : s_15(value, ins.line);
-            if (cho_type == "RDA") type_code = 0;
-            else if (cho_type == "SOF") type_code = 2;
-            else throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": invalid CHO type " + cho_type);
+            return (type_code << 30) | ((flags & M6) << 24) |
+                   ((static_cast<std::uint32_t>(lfo) & M2) << 21) | 0x14u;
         }
-        return (type_code << 30) | ((flags & M6) << 24) | ((static_cast<std::uint32_t>(lfo) & M2) << 21) | ((address & M16) << 5) | 0x14u;
+
+        if (cho_type == "RDA") {
+            if (a.size() != 4) {
+                throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": CHO RDA expects LFO, flags, address");
+            }
+            type_code = 0;
+        } else if (cho_type == "SOF") {
+            if (a.size() != 3 && a.size() != 4) {
+                throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": CHO SOF expects LFO, flags[, offset]");
+            }
+            type_code = 2;
+        } else {
+            throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": invalid CHO type " + cho_type);
+        }
+
+        const auto lfo = as_int(eval_expr(a[1], symbols, ins.line));
+        if (lfo < 0 || lfo > 3) {
+            throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": invalid CHO LFO");
+        }
+        flags = a[2].empty()
+            ? 0u
+            : static_cast<std::uint32_t>(as_int(eval_expr(a[2], symbols, ins.line)));
+
+        const std::string value_expr =
+            (cho_type == "SOF" && a.size() == 3) ? std::string{"0"} : a[3];
+        const Value value = eval_expr(value_expr, symbols, ins.line);
+        address = is_int(value)
+            ? static_cast<std::uint32_t>(as_int(value)) & M16
+            : s_15(value, ins.line);
+
+        return (type_code << 30) | ((flags & M6) << 24) |
+               ((static_cast<std::uint32_t>(lfo) & M2) << 21) |
+               ((address & M16) << 5) | 0x14u;
     }
     if (m == "RAW") { need(1); return static_cast<std::uint32_t>(as_int(ex(0))) & 0xffffffffu; }
 

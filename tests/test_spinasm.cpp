@@ -87,6 +87,34 @@ done:
     check(be_word(2) == 0xC0007FCDu,
           "positive S.10 offset must truncate toward zero");
 
+
+    // Official SpinAsm documentation accepts CHO SOF with an omitted zero
+    // offset and CHO RDAL COS0/COS1 aliases. Guard those forms independently
+    // from the larger official differential corpus.
+    const auto cho_forms = fv1::spinasm::compile(
+        "CHO SOF,RMP1,NA\n"
+        "CHO SOF,RMP1,NA,0\n"
+        "CHO RDAL,COS0\n"
+        "CHO RDAL,SIN0,COS|REG\n"
+        "CHO RDAL,COS1\n"
+        "CHO RDAL,SIN1,COS|REG\n");
+
+    const auto same_cho_word = [&](std::size_t lhs, std::size_t rhs) {
+        for (std::size_t byte = 0; byte < 4; ++byte) {
+            if (cho_forms.image[lhs * 4u + byte] != cho_forms.image[rhs * 4u + byte]) return false;
+        }
+        return true;
+    };
+    check(same_cho_word(0, 1), "CHO SOF omitted offset must equal explicit zero");
+    check(same_cho_word(2, 3), "CHO RDAL COS0 must equal SIN0,COS|REG");
+    check(same_cho_word(4, 5), "CHO RDAL COS1 must equal SIN1,COS|REG");
+
+    try {
+        (void)fv1::spinasm::compile("CHO RDAL,SIN0,REG,0\n");
+        check(false, "CHO RDAL must reject a fourth operand");
+    } catch (const fv1::spinasm::CompileError&) {
+    }
+
     if (failures == 0) std::cout << "fv1-spinasm native compiler tests passed\n";
     return failures == 0 ? 0 : 1;
 }

@@ -1,0 +1,9 @@
+; Delay memory addressing and both documented MEM forms.
+MEM DEL0 32
+DEL1 MEM 64
+RDA DEL0,1.0
+RDA DEL0^,0.5
+RDA DEL0#,-0.5
+RMPA 1.0
+WRA DEL1,0.0
+WRAP DEL1#,1.0

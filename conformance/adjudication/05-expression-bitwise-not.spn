@@ -1,0 +1,2 @@
+EQU X ~0
+AND X

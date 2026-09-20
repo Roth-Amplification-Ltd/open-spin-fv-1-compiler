@@ -15,6 +15,31 @@ Reverse-engineering and byte-level differential testing found and corrected real
 
 That statement is deliberately corpus-scoped. See `docs/CONFORMANCE.md` and `docs/QUALIFICATION.md`.
 
+## 1.0 qualification work
+
+The 0.x releases are usable compiler releases, but `1.0.0` is reserved for a
+larger genuine-SpinAsm compatibility seal.
+
+The repository now carries a deterministic qualification surface under
+`conformance/`:
+
+- `corpus/` — intended SpinAsm 1.1.31 positive differential cases;
+- `local/` — deliberate open-spin-fv1 extensions such as `RAW`;
+- `adjudication/` — isolated syntax/parser questions that still need the real
+  SpinAsm application to classify.
+
+Run the local integrity/qualification pass with:
+
+```sh
+python3 tools/generate_conformance_corpus.py --check
+python3 tools/corpus_audit.py
+python3 tools/qualification.py --repo . --build build --expect-version 0.2.0
+```
+
+Then use `tools/compiler_conformance.py prepare-official` and `run` for the
+authoritative genuine SpinAsm 1.1.31 differential. See
+`docs/QUALIFICATION-1.0.md`.
+
 ## Build
 
 Linux/macOS:

@@ -1,0 +1,372 @@
+{
+  "cases": [
+    {
+      "covers": [
+        "opcode:RDAX",
+        "opcode:RDFX",
+        "alias:LDAX",
+        "opcode:WRAX",
+        "opcode:WRHX",
+        "opcode:WRLX",
+        "opcode:MAXX",
+        "alias:ABSA",
+        "opcode:MULX",
+        "opcode:LOG",
+        "opcode:EXP",
+        "opcode:SOF",
+        "opcode:AND",
+        "alias:CLR",
+        "opcode:OR",
+        "opcode:XOR",
+        "alias:NOT",
+        "register:special",
+        "register:REG0",
+        "register:REG31"
+      ],
+      "path": "conformance/corpus/00-register-alu.spn",
+      "sha256": "ff36f888639d90de498fc12050753c4bfec6b2da01920bdb63dff3a17ca1397e",
+      "tier": "official"
+    },
+    {
+      "covers": [
+        "opcode:RDA",
+        "opcode:RMPA",
+        "opcode:WRA",
+        "opcode:WRAP",
+        "directive:MEM-prefix",
+        "directive:MEM-infix",
+        "memory:start",
+        "memory:mid",
+        "memory:end"
+      ],
+      "path": "conformance/corpus/01-delay-memory.spn",
+      "sha256": "321e38d623e1486521ec7b22848ac6352d321ed63df4edf3cac0956bb174e023",
+      "tier": "official"
+    },
+    {
+      "covers": [
+        "opcode:WLDS",
+        "opcode:WLDR",
+        "opcode:JAM",
+        "lfo:SIN0",
+        "lfo:SIN1",
+        "lfo:RMP0",
+        "lfo:RMP1",
+        "boundary:WLDS-rate-min",
+        "boundary:WLDS-rate-max",
+        "boundary:WLDR-rate-min",
+        "boundary:WLDR-rate-max",
+        "boundary:ramp-range-4096",
+        "boundary:ramp-range-2048",
+        "boundary:ramp-range-1024",
+        "boundary:ramp-range-512"
+      ],
+      "path": "conformance/corpus/02-lfo-control.spn",
+      "sha256": "f9e4273ee2a64de82d51649601cd0d0f2f8b39153f4231ec16b4cfd599b2d91a",
+      "tier": "official"
+    },
+    {
+      "covers": [
+        "opcode:CHO-RDA",
+        "opcode:CHO-SOF",
+        "opcode:CHO-RDAL",
+        "cho:SIN",
+        "cho:COS",
+        "cho:REG",
+        "cho:COMPC",
+        "cho:COMPA",
+        "cho:SIN0",
+        "cho:SIN1",
+        "cho:COS0-alias",
+        "cho:COS1-alias"
+      ],
+      "path": "conformance/corpus/03-cho-sine.spn",
+      "sha256": "22655ce38177fd5879a09c7374d1b6280eff5cd56d4d57e0cd42d3d07d17fd65",
+      "tier": "official"
+    },
+    {
+      "covers": [
+        "opcode:CHO-RDA",
+        "opcode:CHO-SOF",
+        "opcode:CHO-RDAL",
+        "cho:RMP0",
+        "cho:RMP1",
+        "cho:RPTR2",
+        "cho:NA",
+        "cho:REG",
+        "cho:COMPC",
+        "cho:COMPA",
+        "cho:SOF-default-offset"
+      ],
+      "path": "conformance/corpus/04-cho-ramp.spn",
+      "sha256": "c6e47da7ff7cc91586388bd0863cd7ddd7b9962f370594113482b9ff0de9f70a",
+      "tier": "official"
+    },
+    {
+      "covers": [
+        "opcode:SKP",
+        "alias:NOP",
+        "skp:unconditional",
+        "skp:RUN",
+        "skp:ZRC",
+        "skp:ZRO",
+        "skp:GEZ",
+        "skp:NEG",
+        "skp:combined-flags",
+        "boundary:SKP-offset-0",
+        "boundary:SKP-offset-1"
+      ],
+      "path": "conformance/corpus/05-skp-conditions.spn",
+      "sha256": "ee8950f397e54d25b735810ae79cda537d9c9970f4f8817438e9655edddccc09",
+      "tier": "official"
+    },
+    {
+      "covers": [
+        "opcode:SKP",
+        "alias:NOP",
+        "boundary:SKP-offset-63",
+        "label:forward"
+      ],
+      "path": "conformance/corpus/06-skp-offset-63.spn",
+      "sha256": "553a0fac368e6cdda2a27f8244c9cabe11f1caed00066e35157cfa079547a8b3",
+      "tier": "official"
+    },
+    {
+      "covers": [
+        "directive:EQU-prefix",
+        "directive:EQU-infix",
+        "directive:MEM-prefix",
+        "directive:MEM-infix",
+        "literal:decimal",
+        "literal:hex",
+        "literal:binary",
+        "expression:add",
+        "expression:or",
+        "case:insensitive",
+        "comment:semicolon",
+        "label:same-line"
+      ],
+      "path": "conformance/corpus/07-equ-mem-symbols.spn",
+      "sha256": "836065561c2c5a2e235662d474a3456cf162a256447a8bc630a57898db483bb0",
+      "tier": "official"
+    },
+    {
+      "covers": [
+        "fixed:S1.9-min",
+        "fixed:S1.9-max",
+        "fixed:S1.14-min",
+        "fixed:S1.14-max",
+        "fixed:S.10-min",
+        "fixed:S.10-max",
+        "fixed:S.15-min",
+        "fixed:S.15-max",
+        "mask:24bit-min",
+        "mask:24bit-max"
+      ],
+      "path": "conformance/corpus/08-fixed-point-boundaries.spn",
+      "sha256": "fefd69cbbe9f60753c2d6c633e7bfd65ccc889fc91f8a8f22b4ec5de7574a992",
+      "tier": "official"
+    },
+    {
+      "covers": [
+        "oracle:SOF-0.075-0.004",
+        "oracle:RDA-minus-0.22",
+        "oracle:SOF-minus1-0.999",
+        "quantization:truncate-toward-zero"
+      ],
+      "path": "conformance/corpus/09-official-quantization-oracle.spn",
+      "sha256": "320d2cfe991814a4cc26e7ba7cedf0493853ef3a73da6df987d1fb2eed5309c8",
+      "tier": "official"
+    },
+    {
+      "covers": [
+        "register:SIN0_RATE",
+        "register:SIN0_RANGE",
+        "register:SIN1_RATE",
+        "register:SIN1_RANGE",
+        "register:RMP0_RATE",
+        "register:RMP0_RANGE",
+        "register:RMP1_RATE",
+        "register:RMP1_RANGE",
+        "register:POT0",
+        "register:POT1",
+        "register:POT2",
+        "register:ADCL",
+        "register:ADCR",
+        "register:DACL",
+        "register:DACR",
+        "register:ADDR_PTR",
+        "register:REG0",
+        "register:REG31"
+      ],
+      "path": "conformance/corpus/10-register-symbol-map.spn",
+      "sha256": "1fea0c839717770c89c73a3e74d89c7493ae6e43edce01a3a658c6428c2bd5c7",
+      "tier": "official"
+    },
+    {
+      "covers": [
+        "padding:NOP",
+        "label:standalone",
+        "label:same-line",
+        "case:upper-lower"
+      ],
+      "path": "conformance/corpus/11-padding-and-empty-labels.spn",
+      "sha256": "fcb6142b3779af36f223c5f3b07333c3bd0349045f5b8b5bec718e2333a50651",
+      "tier": "official"
+    },
+    {
+      "covers": [
+        "extension:RAW"
+      ],
+      "path": "conformance/local/00-raw-extension.spn",
+      "sha256": "110a646fec433d6079a4555a814baef20b137dea4e60102ec154271b8b6ad4eb",
+      "tier": "local"
+    },
+    {
+      "covers": [
+        "expression:multiply"
+      ],
+      "path": "conformance/adjudication/00-expression-multiply.spn",
+      "sha256": "9b1058812c81274f125da09b00c93d93ddc8499bdb744302d95c0aee4a62351c",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "expression:divide"
+      ],
+      "path": "conformance/adjudication/01-expression-divide.spn",
+      "sha256": "32a6aa240283101cd9841104b36f81f7e63ecca84f12ea245bb2913aa345be34",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "expression:floor-divide"
+      ],
+      "path": "conformance/adjudication/02-expression-floor-divide.spn",
+      "sha256": "37f3672ffe15d1699f1afdd2be66b2b348e82c9223797e21a8d4dd5cf27fb555",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "expression:power"
+      ],
+      "path": "conformance/adjudication/03-expression-power.spn",
+      "sha256": "bb7a11b141a39990d10eb7acbe0d5f60322b3afb019fb5f5908c55e2dd042eab",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "expression:shift"
+      ],
+      "path": "conformance/adjudication/04-expression-shift.spn",
+      "sha256": "98643560be0c86c7c6cc6915b93f329ec1e990dcc02f83d556fc689b1c1e3f87",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "expression:bitwise-not"
+      ],
+      "path": "conformance/adjudication/05-expression-bitwise-not.spn",
+      "sha256": "e0e727db46e2640308322cfc781d792de4f16ea699b90470ab8c79e5b94d56f7",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "expression:INT"
+      ],
+      "path": "conformance/adjudication/06-expression-int.spn",
+      "sha256": "84464508e7d732c1fb075fc1bce3287cdb9168bbaf7383f526f883b19f4832bf",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "literal:underscore"
+      ],
+      "path": "conformance/adjudication/07-numeric-underscores.spn",
+      "sha256": "5281776f6e1faed31da71ccf583db7f42e392bc2d282645ff83a15aa4ec1243f",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "literal:scientific"
+      ],
+      "path": "conformance/adjudication/08-scientific-notation.spn",
+      "sha256": "5d30e8d86403a2f5b08d136b8debc75004b7b7220091fe77636ec225b578cd11",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "extension:RAW-official-status"
+      ],
+      "path": "conformance/adjudication/09-raw-pseudo-op.spn",
+      "sha256": "486447303382956807aa16aacde41267c05470d170827b84f4589b3a9570fd87",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "candidate:real-bitmask"
+      ],
+      "path": "conformance/adjudication/10-real-bitmask-min.spn",
+      "sha256": "ad7cd0e5c19f083fb18e2c6fd4b5531b65071f73c4bb30a5c2ad17c373a54f1a",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "candidate:real-bitmask"
+      ],
+      "path": "conformance/adjudication/11-real-bitmask-max.spn",
+      "sha256": "6370ae61e9d6c6895d632adf1678b755c76ea6ee3507c8a7bd0a58b826376e6f",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "candidate:label-leading-underscore"
+      ],
+      "path": "conformance/adjudication/12-label-leading-underscore.spn",
+      "sha256": "9a97723dfd9b0852d817a631bd78f5ce00449b3f336b49cfb42160f318b876bd",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "candidate:label-length"
+      ],
+      "path": "conformance/adjudication/13-label-over-32.spn",
+      "sha256": "6f43b09ad57f6ebb525941b5892e85208db9201194b5caba6a57ce42bbf10678",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "candidate:cho-rdal-flags"
+      ],
+      "path": "conformance/adjudication/14-cho-rdal-explicit-flags.spn",
+      "sha256": "c868f1dfd2e351f8234d5fafc1c68c97801311d21f55dfd6b4366e5357729218",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "candidate:wlds-zero-rate"
+      ],
+      "path": "conformance/adjudication/15-wlds-zero-rate.spn",
+      "sha256": "4adb579b6af63e18ef3a74bcd99607fd51799ab24872a866691bdd6ca221187b",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "candidate:wlds-real-amplitude"
+      ],
+      "path": "conformance/adjudication/16-wlds-real-amplitude.spn",
+      "sha256": "32d9fb057ea2ca4df4a22d4bdefeb7b379874317163ad44b45b9f5a6042bf678",
+      "tier": "adjudication"
+    },
+    {
+      "covers": [
+        "candidate:wldr-real-rate"
+      ],
+      "path": "conformance/adjudication/17-wldr-real-rate.spn",
+      "sha256": "32d0f632c6988e4d37055dc3df6798097429a80de183eeab248f3c63103fbb05",
+      "tier": "adjudication"
+    }
+  ],
+  "format": 1,
+  "target": "Spin Semiconductor SpinAsm 1.1.31"
+}

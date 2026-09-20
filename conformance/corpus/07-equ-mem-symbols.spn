@@ -1,0 +1,16 @@
+; Both documented declaration forms and basic documented numeric forms.
+EQU HALF 0.5
+UNITY EQU 1.0
+EQU HEXVAL $10
+BINVAL EQU %10
+EQU SUM $10+%10
+MEM A 8
+B MEM 8
+start: rdax adcl,UNITY ; lower-case opcode and inline comment
+SOF HALF,0
+AND HEXVAL|BINVAL
+OR SUM
+RDA A#,0.5
+WRA B,0
+SKP 0,done
+done: NOP
