@@ -1,0 +1,40 @@
+{
+  "adjudication": {
+    "00-expression-multiply.spn": "REJECT",
+    "01-expression-divide.spn": "ACCEPT",
+    "02-expression-floor-divide.spn": "REJECT",
+    "03-expression-power.spn": "REJECT",
+    "04-expression-shift.spn": "REJECT",
+    "05-expression-bitwise-not.spn": "ACCEPT",
+    "06-expression-int.spn": "REJECT",
+    "07-numeric-underscores.spn": "REJECT",
+    "08-scientific-notation.spn": "REJECT",
+    "09-raw-pseudo-op.spn": "REJECT",
+    "10-real-bitmask-min.spn": "REJECT",
+    "11-real-bitmask-max.spn": "ACCEPT",
+    "12-label-leading-underscore.spn": "REJECT",
+    "13-label-over-32.spn": "ACCEPT",
+    "14-cho-rdal-explicit-flags.spn": "REJECT",
+    "15-wlds-zero-rate.spn": "ACCEPT",
+    "16-wlds-real-amplitude.spn": "ACCEPT",
+    "17-wldr-real-rate.spn": "ACCEPT"
+  },
+  "cho_sof": {
+    "explicit_zero": "ACCEPT",
+    "missing_offset": "REJECT"
+  },
+  "note": "RAW remains a deliberate local extension despite official rejection.",
+  "oracle_executable_sha256": "c20c46a6c8999ead5ac088ea9b7700b7fae168b6ee704e26218e40166fa6189f",
+  "schema": "open-spin-fv1-spinasm-v15-adjudication-v1",
+  "summary": {
+    "accept": 7,
+    "indeterminate": 0,
+    "reject": 11
+  },
+  "target": "Spin Semiconductor SpinAsm 1.1.31",
+  "v15_results_zip_sha256": "c90b3196dcd8eea393a3b3a0d64990884368d9d0817b4afa2598374241d088e8",
+  "wldr_integer_rate": {
+    "maximum_accepted": 32767,
+    "minimum_accepted": -16384
+  }
+}

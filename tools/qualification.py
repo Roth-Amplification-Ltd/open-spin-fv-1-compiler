@@ -141,11 +141,14 @@ def main() -> int:
     corpus = load_corpus_manifest(repo)
     official = sorted(repo / c["path"] for c in corpus["cases"] if c["tier"] == "official")
     local = sorted(repo / c["path"] for c in corpus["cases"] if c["tier"] == "local")
+    rejection = sorted(repo / c["path"] for c in corpus["cases"] if c["tier"] == "rejection")
     shipped = sorted(p for p in (repo / "examples").rglob("*.spn") if "compiled" not in p.parts)
     if len(shipped) < 9:
         raise RuntimeError(f"expected at least 9 shipped programs, got {len(shipped)}")
-    if len(official) < 12:
-        raise RuntimeError(f"expected at least 12 official-positive torture cases, got {len(official)}")
+    if len(official) < 19:
+        raise RuntimeError(f"expected at least 19 official-positive torture cases, got {len(official)}")
+    if len(rejection) < 12:
+        raise RuntimeError(f"expected at least 12 official-rejection cases, got {len(rejection)}")
     if not local:
         raise RuntimeError("expected at least one local-extension corpus case")
 
@@ -188,29 +191,12 @@ def main() -> int:
             raise RuntimeError(f"official SpinAsm quantization oracle mismatch: {words!r} != {expected!r}")
         print("PASS official SpinAsm 1.1.31 fixed-point oracle")
 
-        # Documented CHO forms that were previously unguarded.
-        cho_src = td / "cho-documented.spn"
-        cho_src.write_text(
-            "CHO SOF,RMP1,NA\n"
-            "CHO SOF,RMP1,NA,0\n"
-            "CHO RDAL,COS0\n"
-            "CHO RDAL,SIN0,COS|REG\n"
-            "CHO RDAL,COS1\n"
-            "CHO RDAL,SIN1,COS|REG\n",
-            encoding="utf-8",
-        )
-        cho_bin = td / "cho-documented.bin"
-        run([cli, "assemble", cho_src, cho_bin])
-        cho = cho_bin.read_bytes()
-        def word(i: int) -> bytes:
-            return cho[i*4:(i+1)*4]
-        if word(0) != word(1):
-            raise RuntimeError("CHO SOF default offset does not equal explicit zero offset")
-        if word(2) != word(3):
-            raise RuntimeError("CHO RDAL COS0 alias does not equal SIN0,COS|REG")
-        if word(4) != word(5):
-            raise RuntimeError("CHO RDAL COS1 alias does not equal SIN1,COS|REG")
-        print("PASS documented CHO shorthand/alias equivalence")
+        cho_src = td / "cho-v15-positive.spn"
+        cho_src.write_text("CHO SOF,RMP1,NA,0\nCHO RDAL,COS0\nCHO RDAL,COS1\n", encoding="utf-8")
+        run([cli, "--check", cho_src])
+        expect_reject(cli, td, "cho-sof-missing-offset", "CHO SOF,RMP1,NA\n")
+        expect_reject(cli, td, "cho-rdal-explicit-flags", "CHO RDAL,SIN0,COS|REG\n")
+        print("PASS V15 CHO arity/alias contract")
 
         # 128 words is legal; 129 must fail.
         max_ok = td / "max128.spn"
@@ -251,7 +237,7 @@ def main() -> int:
             ("wlds-rate", "WLDS SIN0,512,0\n", None),
             ("wldr-lfo", "WLDR 4,0,4096\n", None),
             ("wldr-rate-high", "WLDR RMP0,32768,4096\n", None),
-            ("wldr-rate-low", "WLDR RMP0,-32769,4096\n", None),
+            ("wldr-rate-low", "WLDR RMP0,-16385,4096\n", None),
             ("wldr-range", "WLDR RMP0,0,123\n", None),
             ("jam-lfo", "JAM 4\n", None),
             ("cho-type", "CHO BAD,SIN0,0,0\n", None),
@@ -265,6 +251,17 @@ def main() -> int:
         ]
         for name, source, contains in rejections:
             expect_reject(cli, td, name, source, contains)
+
+        for src in rejection:
+            proc = subprocess.run([str(cli), "--check", str(src)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            if proc.returncode == 0:
+                raise RuntimeError(f"{src.relative_to(repo).as_posix()}: V15-rejected source unexpectedly compiled")
+            print(f"PASS V15 reject {src.relative_to(repo).as_posix()}")
+
+        wldr_min = td / "wldr-min.spn"
+        wldr_min.write_text("WLDR RMP0,-16384,4096\n", encoding="utf-8")
+        run([cli, "--check", wldr_min])
+        print("PASS V15 WLDR minimum integer rate -16384")
 
         # Output overwrite must be deterministic too.
         overwrite = td / "overwrite.bin"
@@ -289,7 +286,7 @@ def main() -> int:
     print(
         "QUALIFICATION PASS: "
         f"shipped={len(shipped)} official-torture={len(official)} "
-        f"local-extension={len(local)} sealed-golden={sealed}"
+        f"local-extension={len(local)} official-rejection={len(rejection)} sealed-golden={sealed}"
     )
     return 0
 

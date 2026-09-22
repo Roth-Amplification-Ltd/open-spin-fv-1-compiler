@@ -170,16 +170,16 @@ public:
         const char c = text_[pos_];
         if (std::isdigit(static_cast<unsigned char>(c)) || c == '.') return number();
         if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') return identifier();
-        if (c == '<' && peek(1) == '<') { pos_ += 2; return {TokenKind::LShift, "<<", std::int64_t{0}}; }
-        if (c == '>' && peek(1) == '>') { pos_ += 2; return {TokenKind::RShift, ">>", std::int64_t{0}}; }
-        if (c == '*' && peek(1) == '*') { pos_ += 2; return {TokenKind::Power, "**", std::int64_t{0}}; }
-        if (c == '/' && peek(1) == '/') { pos_ += 2; return {TokenKind::FloorDiv, "//", std::int64_t{0}}; }
+        if (c == '<' && peek(1) == '<') throw std::runtime_error("unsupported SpinAsm operator <<");
+        if (c == '>' && peek(1) == '>') throw std::runtime_error("unsupported SpinAsm operator >>");
+        if (c == '*' && peek(1) == '*') throw std::runtime_error("unsupported SpinAsm operator **");
+        if (c == '/' && peek(1) == '/') throw std::runtime_error("unsupported SpinAsm operator //");
         ++pos_;
         switch (c) {
             case '+': return {TokenKind::Plus, "+", std::int64_t{0}};
             case '-': return {TokenKind::Minus, "-", std::int64_t{0}};
             case '~': return {TokenKind::Tilde, "~", std::int64_t{0}};
-            case '*': return {TokenKind::Star, "*", std::int64_t{0}};
+            case '*': throw std::runtime_error("unsupported SpinAsm operator *");
             case '/': return {TokenKind::Slash, "/", std::int64_t{0}};
             case '|': return {TokenKind::Pipe, "|", std::int64_t{0}};
             case '&': return {TokenKind::Amp, "&", std::int64_t{0}};
@@ -213,39 +213,29 @@ private:
         const std::size_t start = pos_;
         if (text_[pos_] == '0' && (peek(1) == 'x' || peek(1) == 'X')) {
             pos_ += 2;
-            while (pos_ < text_.size() && (std::isxdigit(static_cast<unsigned char>(text_[pos_])) != 0 || text_[pos_] == '_')) ++pos_;
+            while (pos_ < text_.size() && std::isxdigit(static_cast<unsigned char>(text_[pos_])) != 0) ++pos_;
             std::string raw = text_.substr(start + 2, pos_ - start - 2);
-            raw.erase(std::remove(raw.begin(), raw.end(), '_'), raw.end());
             if (raw.empty()) throw std::runtime_error("invalid hexadecimal literal");
             return {TokenKind::Number, text_.substr(start, pos_ - start), static_cast<std::int64_t>(std::stoll(raw, nullptr, 16))};
         }
         if (text_[pos_] == '0' && (peek(1) == 'b' || peek(1) == 'B')) {
             pos_ += 2;
-            while (pos_ < text_.size() && (text_[pos_] == '0' || text_[pos_] == '1' || text_[pos_] == '_')) ++pos_;
+            while (pos_ < text_.size() && (text_[pos_] == '0' || text_[pos_] == '1')) ++pos_;
             std::string raw = text_.substr(start + 2, pos_ - start - 2);
-            raw.erase(std::remove(raw.begin(), raw.end(), '_'), raw.end());
             if (raw.empty()) throw std::runtime_error("invalid binary literal");
             return {TokenKind::Number, text_.substr(start, pos_ - start), static_cast<std::int64_t>(std::stoll(raw, nullptr, 2))};
         }
 
         bool saw_dot = false;
-        bool saw_exp = false;
         while (pos_ < text_.size()) {
             const char c = text_[pos_];
-            if (std::isdigit(static_cast<unsigned char>(c)) != 0 || c == '_') { ++pos_; continue; }
-            if (c == '.' && !saw_dot && !saw_exp) { saw_dot = true; ++pos_; continue; }
-            if ((c == 'e' || c == 'E') && !saw_exp) {
-                saw_exp = true;
-                ++pos_;
-                if (pos_ < text_.size() && (text_[pos_] == '+' || text_[pos_] == '-')) ++pos_;
-                continue;
-            }
+            if (std::isdigit(static_cast<unsigned char>(c)) != 0) { ++pos_; continue; }
+            if (c == '.' && !saw_dot) { saw_dot = true; ++pos_; continue; }
             break;
         }
         std::string raw = text_.substr(start, pos_ - start);
-        raw.erase(std::remove(raw.begin(), raw.end(), '_'), raw.end());
         if (raw == ".") throw std::runtime_error("invalid numeric literal");
-        if (saw_dot || saw_exp) return {TokenKind::Number, raw, std::stod(raw)};
+        if (saw_dot) return {TokenKind::Number, raw, std::stod(raw)};
         return {TokenKind::Number, raw, static_cast<std::int64_t>(std::stoll(raw, nullptr, 10))};
     }
 
@@ -359,11 +349,6 @@ private:
         if (current_.kind == TokenKind::Identifier) {
             const std::string name = current_.text;
             advance();
-            if (upper(name) == "INT" && accept(TokenKind::LParen)) {
-                Value value = parse_or();
-                expect(TokenKind::RParen, "')'");
-                return round_even(as_double(value));
-            }
             const auto it = symbols_.find(upper(name));
             if (it == symbols_.end()) throw std::runtime_error("undefined symbol: " + name);
             return it->second;
@@ -420,7 +405,7 @@ std::uint32_t s1_9(const Value& v, std::uint32_t line) { return fixed(v, 512, -2
 std::uint32_t s1_14(const Value& v, std::uint32_t line) { return fixed(v, 16384, -2.0, 1.99993896484375, M16, "S1.14", line); }
 std::uint32_t s_10(const Value& v, std::uint32_t line) { return fixed(v, 1024, -1.0, 0.9990234375, M11, "S.10", line); }
 std::uint32_t s_15(const Value& v, std::uint32_t line) { return fixed(v, 32768, -1.0, 0.999969482421875, M16, "S.15", line); }
-std::uint32_t s_23(const Value& v, std::uint32_t line) { return fixed(v, 8388608, -1.0, 0.9999998807907104, M24, "S.23", line); }
+std::uint32_t s_23(const Value& v, std::uint32_t line) { return fixed(v, 8388608, 0.0, 0.9999998807907104, M24, "U.23", line); }
 
 struct ParsedInstruction {
     std::string mnemonic;
@@ -495,7 +480,7 @@ ParseResult parse_source(std::string_view source) {
     std::istringstream stream{std::string(source)};
     std::string raw;
     std::uint32_t line_no = 0;
-    static const std::regex label_re(R"(^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$)");
+    static const std::regex label_re(R"(^([A-Za-z][A-Za-z0-9_]*):\s*(.*)$)");
 
     while (std::getline(stream, raw)) {
         ++line_no;
@@ -660,7 +645,7 @@ std::uint32_t encode_instruction(const ParsedInstruction& ins, const SymbolTable
         std::uint32_t freq = 0;
         if (is_int(freq_value)) {
             const auto rate = as_int(freq_value);
-            if (rate < -0x8000LL || rate > 0x7fffLL) throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": invalid ramp rate");
+            if (rate < -0x4000LL || rate > 0x7fffLL) throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": invalid ramp rate");
             freq = static_cast<std::uint32_t>(rate) & M16;
         } else {
             freq = s_15(freq_value, ins.line);
@@ -693,8 +678,8 @@ std::uint32_t encode_instruction(const ParsedInstruction& ins, const SymbolTable
         std::uint32_t type_code = 0;
 
         if (cho_type == "RDAL") {
-            if (a.size() != 2 && a.size() != 3) {
-                throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": CHO RDAL expects LFO[, flags]");
+            if (a.size() != 2) {
+                throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": CHO RDAL expects exactly one LFO operand");
             }
 
             const std::string lfo_token = upper(trim(a[1]));
@@ -713,9 +698,7 @@ std::uint32_t encode_instruction(const ParsedInstruction& ins, const SymbolTable
                 throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": invalid CHO LFO");
             }
 
-            flags = a.size() == 3 && !a[2].empty()
-                ? static_cast<std::uint32_t>(as_int(eval_expr(a[2], symbols, ins.line)))
-                : 2u; // official default is REG
+            flags = 2u; // genuine SpinAsm 1.1.31: explicit RDAL flags reject
             if (cosine_alias) flags |= 1u; // COS0/COS1 select cosine output
             type_code = 3;
             return (type_code << 30) | ((flags & M6) << 24) |
@@ -728,8 +711,8 @@ std::uint32_t encode_instruction(const ParsedInstruction& ins, const SymbolTable
             }
             type_code = 0;
         } else if (cho_type == "SOF") {
-            if (a.size() != 3 && a.size() != 4) {
-                throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": CHO SOF expects LFO, flags[, offset]");
+            if (a.size() != 4) {
+                throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": CHO SOF expects LFO, flags, offset");
             }
             type_code = 2;
         } else {
@@ -744,9 +727,7 @@ std::uint32_t encode_instruction(const ParsedInstruction& ins, const SymbolTable
             ? 0u
             : static_cast<std::uint32_t>(as_int(eval_expr(a[2], symbols, ins.line)));
 
-        const std::string value_expr =
-            (cho_type == "SOF" && a.size() == 3) ? std::string{"0"} : a[3];
-        const Value value = eval_expr(value_expr, symbols, ins.line);
+        const Value value = eval_expr(a[3], symbols, ins.line);
         address = is_int(value)
             ? static_cast<std::uint32_t>(as_int(value)) & M16
             : s_15(value, ins.line);

@@ -88,31 +88,69 @@ done:
           "positive S.10 offset must truncate toward zero");
 
 
-    // Official SpinAsm documentation accepts CHO SOF with an omitted zero
-    // offset and CHO RDAL COS0/COS1 aliases. Guard those forms independently
-    // from the larger official differential corpus.
-    const auto cho_forms = fv1::spinasm::compile(
-        "CHO SOF,RMP1,NA\n"
-        "CHO SOF,RMP1,NA,0\n"
-        "CHO RDAL,COS0\n"
-        "CHO RDAL,SIN0,COS|REG\n"
-        "CHO RDAL,COS1\n"
-        "CHO RDAL,SIN1,COS|REG\n");
-
-    const auto same_cho_word = [&](std::size_t lhs, std::size_t rhs) {
-        for (std::size_t byte = 0; byte < 4; ++byte) {
-            if (cho_forms.image[lhs * 4u + byte] != cho_forms.image[rhs * 4u + byte]) return false;
-        }
-        return true;
-    };
-    check(same_cho_word(0, 1), "CHO SOF omitted offset must equal explicit zero");
-    check(same_cho_word(2, 3), "CHO RDAL COS0 must equal SIN0,COS|REG");
-    check(same_cho_word(4, 5), "CHO RDAL COS1 must equal SIN1,COS|REG");
+    // Genuine SpinAsm 1.1.31 V14/V15 oracle contract.
+    try {
+        (void)fv1::spinasm::compile("CHO SOF,RMP1,NA\n");
+        check(false, "CHO SOF omitted offset must reject");
+    } catch (const fv1::spinasm::CompileError&) {
+    }
 
     try {
-        (void)fv1::spinasm::compile("CHO RDAL,SIN0,REG,0\n");
-        check(false, "CHO RDAL must reject a fourth operand");
+        (void)fv1::spinasm::compile("CHO SOF,RMP1,NA,0\nCHO RDAL,COS0\nCHO RDAL,COS1\n");
+    } catch (...) {
+        check(false, "official CHO positive forms must compile");
+    }
+
+    try {
+        (void)fv1::spinasm::compile("CHO RDAL,SIN0,COS|REG\n");
+        check(false, "CHO RDAL explicit flags must reject");
     } catch (const fv1::spinasm::CompileError&) {
+    }
+
+    try {
+        (void)fv1::spinasm::compile("WLDR RMP0,-16384,4096\nWLDR RMP1,32767,512\n");
+    } catch (...) {
+        check(false, "WLDR V15 boundary values must compile");
+    }
+
+    try {
+        (void)fv1::spinasm::compile("WLDR RMP0,-16385,4096\n");
+        check(false, "WLDR below V15 minimum must reject");
+    } catch (const fv1::spinasm::CompileError&) {
+    }
+
+    const char* rejected_forms[] = {
+        "EQU X 2*3\nSOF X,0\n",
+        "EQU X 7//2\nSOF X,0\n",
+        "EQU X 2**3\nSOF X,0\n",
+        "EQU X 1<<4\nAND X\n",
+        "EQU X INT(1.5)\nSOF X,0\n",
+        "EQU X 1_024\nAND X\n",
+        "SOF 1e-1,0\n",
+        "AND -1.0\n",
+        "_start: NOP\n",
+    };
+    for (const char* rejected : rejected_forms) {
+        try {
+            (void)fv1::spinasm::compile(rejected);
+            check(false, "V15 official-rejected syntax must reject");
+        } catch (const fv1::spinasm::CompileError&) {
+        }
+    }
+
+    try {
+        (void)fv1::spinasm::compile(
+            "EQU X 1/2\n"
+            "SOF X,0\n"
+            "EQU Y ~0\n"
+            "AND Y\n"
+            "OR 0.9999998807907104\n"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFG: NOP\n"
+            "WLDS SIN0,0,1\n"
+            "WLDS SIN0,1,0.5\n"
+            "WLDR RMP0,0.5,4096\n");
+    } catch (...) {
+        check(false, "V15 official-accepted syntax must compile");
     }
 
     if (failures == 0) std::cout << "fv1-spinasm native compiler tests passed\n";
