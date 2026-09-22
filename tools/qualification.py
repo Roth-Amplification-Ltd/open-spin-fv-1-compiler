@@ -229,7 +229,6 @@ def main() -> int:
             ("s10-low", "SOF 1.0,-1.0001\n", None),
             ("s10-high", "SOF 1.0,1.0\n", None),
             ("s15-low", "WLDS SIN0,1,-1.0001\n", None),
-            ("s15-high", "WLDS SIN0,1,1.0\n", None),
             ("skp-negative", "SKP RUN,-1\n", None),
             ("skp-64", "SKP RUN,64\n", None),
             ("skp-backward-label", "back:\nNOP\nSKP RUN,back\n", None),

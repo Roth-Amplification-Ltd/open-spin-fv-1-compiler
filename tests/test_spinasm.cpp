@@ -153,6 +153,46 @@ done:
         check(false, "V15 official-accepted syntax must compile");
     }
 
+    // Genuine SpinAsm V16 final four-bank differential regressions.
+    const auto v16_word = [](const fv1::spinasm::CompileResult& result, std::size_t index) -> std::uint32_t {
+        const std::size_t i = index * 4u;
+        return (static_cast<std::uint32_t>(result.image[i]) << 24u) |
+               (static_cast<std::uint32_t>(result.image[i + 1u]) << 16u) |
+               (static_cast<std::uint32_t>(result.image[i + 2u]) << 8u) |
+               static_cast<std::uint32_t>(result.image[i + 3u]);
+    };
+
+    {
+        const auto r = fv1::spinasm::compile("MEM D 32\nRDA D^,0.5\n");
+        check(v16_word(r, 0) == 0x200001E0u,
+              "even MEM midpoint must select genuine SpinAsm lower-middle address");
+    }
+    {
+        const auto r = fv1::spinasm::compile("CHO SOF,SIN0,0,-1.0\n");
+        check(v16_word(r, 0) == 0x80000014u,
+              "CHO SOF -1.0 must match genuine SpinAsm V16 behavior");
+    }
+    {
+        const auto r = fv1::spinasm::compile("EQU Y ~0\nAND Y\n");
+        check(v16_word(r, 0) == 0x0000000Eu,
+              "SpinAsm ~0 accepted behavior must evaluate to zero");
+    }
+    {
+        const auto r = fv1::spinasm::compile("OR 0.9999998807907104\n");
+        check(v16_word(r, 0) == 0x0000000Fu,
+              "real bit-vector operand must truncate to integer");
+    }
+    {
+        const auto r = fv1::spinasm::compile("WLDS SIN0,1,0.5\n");
+        check(v16_word(r, 0) == 0x00100012u,
+              "WLDS real amplitude must truncate to integer");
+    }
+    {
+        const auto r = fv1::spinasm::compile("WLDR RMP0,0.5,4096\n");
+        check(v16_word(r, 0) == 0x40000012u,
+              "WLDR real rate must truncate to integer");
+    }
+
     if (failures == 0) std::cout << "fv1-spinasm native compiler tests passed\n";
     return failures == 0 ? 0 : 1;
 }

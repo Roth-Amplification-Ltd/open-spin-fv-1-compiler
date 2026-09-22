@@ -332,7 +332,11 @@ private:
             Value v = parse_unary();
             return is_int(v) ? Value{-as_int(v)} : Value{-as_double(v)};
         }
-        if (accept(TokenKind::Tilde)) return ~as_int(parse_unary());
+        if (accept(TokenKind::Tilde)) {
+            const Value value = parse_unary();
+            if (as_int(value) == 0) return std::int64_t{0};
+            throw std::runtime_error("unqualified SpinAsm tilde expression (only ~0 is oracle-verified)");
+        }
         return parse_power();
     }
     Value parse_power() {
@@ -523,7 +527,8 @@ ParseResult parse_source(std::string_view source) {
             }
             const std::string key = upper(name);
             out.symbols[key] = static_cast<std::int64_t>(delay_cursor);
-            out.symbols[key + "__MID"] = static_cast<std::int64_t>(delay_cursor + length / 2u);
+            const std::uint32_t midpoint = length == 0u ? delay_cursor : delay_cursor + (length - 1u) / 2u;
+            out.symbols[key + "__MID"] = static_cast<std::int64_t>(midpoint);
             out.symbols[key + "__END"] = static_cast<std::int64_t>(delay_cursor + length);
             out.highest_delay = std::max(out.highest_delay, delay_cursor + length);
             delay_cursor += length + 1u;
@@ -585,6 +590,22 @@ std::uint32_t encode_instruction(const ParsedInstruction& ins, const SymbolTable
         return s_15(value, ins.line) & M15;
     };
 
+    const auto bit24 = [&](std::size_t i) -> std::uint32_t {
+        const Value value = ex(i);
+        if (!is_int(value)) {
+            const double real = as_double(value);
+            if (!std::isfinite(real) || real < 0.0 || real > static_cast<double>(M24)) {
+                throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": bit-vector operand out of range");
+            }
+            return static_cast<std::uint32_t>(static_cast<std::int64_t>(std::trunc(real))) & M24;
+        }
+        const auto integer = as_int(value);
+        if (integer < 0 || integer > static_cast<std::int64_t>(M24)) {
+            throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": bit-vector operand out of range");
+        }
+        return static_cast<std::uint32_t>(integer) & M24;
+    };
+
     const std::string& m = ins.mnemonic;
     if (m == "RDA")  { need(2); return (s1_9(ex(1), ins.line) << 21) | (addr15(0) << 5) | 0x00u; }
     if (m == "RMPA") { need(1); return (s1_9(ex(0), ins.line) << 21) | 0x01u; }
@@ -602,10 +623,10 @@ std::uint32_t encode_instruction(const ParsedInstruction& ins, const SymbolTable
     if (m == "LOG")  { need(2); return (s1_14(ex(0), ins.line) << 16) | (s_10(ex(1), ins.line) << 5) | 0x0Bu; }
     if (m == "EXP")  { need(2); return (s1_14(ex(0), ins.line) << 16) | (s_10(ex(1), ins.line) << 5) | 0x0Cu; }
     if (m == "SOF")  { need(2); return (s1_14(ex(0), ins.line) << 16) | (s_10(ex(1), ins.line) << 5) | 0x0Du; }
-    if (m == "AND")  { need(1); return (s_23(ex(0), ins.line) << 8) | 0x0Eu; }
+    if (m == "AND")  { need(1); return (bit24(0) << 8) | 0x0Eu; }
     if (m == "CLR")  { need(0); return 0x0Eu; }
-    if (m == "OR")   { need(1); return (s_23(ex(0), ins.line) << 8) | 0x0Fu; }
-    if (m == "XOR")  { need(1); return (s_23(ex(0), ins.line) << 8) | 0x10u; }
+    if (m == "OR")   { need(1); return (bit24(0) << 8) | 0x0Fu; }
+    if (m == "XOR")  { need(1); return (bit24(0) << 8) | 0x10u; }
     if (m == "NOT")  { need(0); return (M24 << 8) | 0x10u; }
     if (m == "SKP") {
         need(2);
@@ -633,7 +654,12 @@ std::uint32_t encode_instruction(const ParsedInstruction& ins, const SymbolTable
         if (lfo < 0 || lfo > 1 || freq < 0 || freq > static_cast<std::int64_t>(M9)) {
             throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": invalid WLDS operands");
         }
-        const std::uint32_t amp = s_15(ex(2), ins.line) & M15;
+        const auto amp_value = ex(2);
+        const auto amp_int = as_int(amp_value);
+        if (amp_int < 0 || amp_int > static_cast<std::int64_t>(M15)) {
+            throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": invalid WLDS amplitude");
+        }
+        const std::uint32_t amp = static_cast<std::uint32_t>(amp_int) & M15;
         return (static_cast<std::uint32_t>(lfo) << 29) | (static_cast<std::uint32_t>(freq) << 20) | (amp << 5) | 0x12u;
     }
     if (m == "WLDR") {
@@ -642,14 +668,11 @@ std::uint32_t encode_instruction(const ParsedInstruction& ins, const SymbolTable
         if (lfo == 2 || lfo == 3) lfo -= 2;
         if (lfo < 0 || lfo > 1) throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": invalid RMP LFO");
         const Value freq_value = ex(1);
-        std::uint32_t freq = 0;
-        if (is_int(freq_value)) {
-            const auto rate = as_int(freq_value);
-            if (rate < -0x4000LL || rate > 0x7fffLL) throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": invalid ramp rate");
-            freq = static_cast<std::uint32_t>(rate) & M16;
-        } else {
-            freq = s_15(freq_value, ins.line);
+        const auto rate = as_int(freq_value);
+        if (rate < -0x4000LL || rate > 0x7fffLL) {
+            throw CompileError(ins.line, "Line " + std::to_string(ins.line) + ": invalid ramp rate");
         }
+        const std::uint32_t freq = static_cast<std::uint32_t>(rate) & M16;
         const auto amp_value = as_int(ex(2));
         std::uint32_t amp_code = 0;
         switch (amp_value) {
@@ -728,9 +751,13 @@ std::uint32_t encode_instruction(const ParsedInstruction& ins, const SymbolTable
             : static_cast<std::uint32_t>(as_int(eval_expr(a[2], symbols, ins.line)));
 
         const Value value = eval_expr(a[3], symbols, ins.line);
-        address = is_int(value)
-            ? static_cast<std::uint32_t>(as_int(value)) & M16
-            : s_15(value, ins.line);
+        if (is_int(value)) {
+            address = static_cast<std::uint32_t>(as_int(value)) & M16;
+        } else if (cho_type == "SOF" && as_double(value) == -1.0) {
+            address = 0u; // genuine SpinAsm 1.1.31 V16 oracle behavior
+        } else {
+            address = s_15(value, ins.line);
+        }
 
         return (type_code << 30) | ((flags & M6) << 24) |
                ((static_cast<std::uint32_t>(lfo) & M2) << 21) |
